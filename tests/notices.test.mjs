@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {TYPES,category,subtype,dateKey,closedReason,selectNotices,publicationTone} from '../web/notices.js';
+import {TYPES,category,subtype,dateKey,closedReason,selectNotices,publicationTone,coverageText} from '../web/notices.js';
 const row=(title,extra={})=>({title,type:'매입임대',region:'서울',audience:['신혼'],status:'모집중',eligibility:'unknown',...extra});
 const defaults=TYPES.filter(t=>t.default).map(t=>t.id);
 const base={types:[...defaults,'purchase-rental']};
@@ -54,4 +54,11 @@ test('special-supply selection uses its own deadline and excludes unverifiable L
  const selected=selectNotices(notices,{types:['sale'],supplyTrack:'신혼부부 특별공급'},'2026-10-04');
  assert.equal(selected.length,1);assert.equal(selected[0].deadline,'2026-10-10');assert.equal(notices[0].deadline,'2026-10-20');
  assert.equal(selectNotices(notices,{types:['sale'],supplyTrack:'special'},'2026-10-11').length,0);
+});
+
+test('coverage distinguishes live connection, failure, stale data and unset key',()=>{
+ assert.match(coverageText({ok:true,state:'connected',count:28}),/청약홈 연결/);
+ assert.match(coverageText({ok:true,state:'connected',count:28},true),/이전 정상 자료 28건/);
+ assert.match(coverageText({ok:false,state:'error'}),/수집 지연/);
+ assert.match(coverageText({ok:false,state:'unconnected'}),/미연결/);
 });

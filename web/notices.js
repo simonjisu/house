@@ -78,3 +78,10 @@ export function publicationTone(n,today=todayKST()){
  const days=Math.max(0,Math.round((Date.parse(today)-Date.parse(date))/86400000));
  return days<=7?'new':days<=30?'recent':days<=90?'older':'old';
 }
+
+export function coverageText(source,stale=false){
+ const scope='서울·경기 APT·민간사전청약·신혼희망타운, 최근 60일';
+ if(source?.ok&&!stale)return '분양: LH + 청약홈 연결 · '+scope+' · 최근 수집 '+source.count+'건. 특별공급·일반공급 기간은 별도로 확인하세요.';
+ if(source?.state==='error'||(source?.state==='connected'&&stale))return '분양: LH 목록 제공 · 청약홈 수집 지연'+(source.count?' · 이전 정상 자료 '+source.count+'건 유지':'')+'. 최신 상태와 접수기간은 원문 확인이 필요합니다.';
+ return '분양: LH 목록 제공 · 청약홈 미연결. 민간분양·특별공급 API 자료는 연결 후 표시합니다. LH 목록 마감일은 특별공급 마감일로 확인된 날짜가 아닙니다.';
+}

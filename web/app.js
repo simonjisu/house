@@ -1,5 +1,5 @@
 import {authClient,readProtectedSnapshot} from './auth.js';
-import {TYPES,category,subtype,dateKey,todayKST,closedReason,selectNotices,publicationTone} from './notices.js';
+import {TYPES,category,subtype,dateKey,todayKST,closedReason,selectNotices,publicationTone,coverageText} from './notices.js';
 const $=id=>document.getElementById(id);
 let data;
 const node=(tag,content,className)=>{const n=document.createElement(tag);n.textContent=content;if(className)n.className=className;return n;};
@@ -51,7 +51,7 @@ function render(){
 }
 let client=null,epoch=0;
 function clearData(){
- epoch++;data=null;$('protectedContent').hidden=true;$('cards').replaceChildren();$('closedCards').replaceChildren();$('count').textContent='';$('health').replaceChildren();$('filterSummary').textContent='';$('loginPanel').classList.remove('ready');
+ epoch++;data=null;$('protectedContent').hidden=true;$('cards').replaceChildren();$('closedCards').replaceChildren();$('count').textContent='';$('health').replaceChildren();$('filterSummary').textContent='';$('coverageStatus').textContent='';$('loginPanel').classList.remove('ready');
  $('localIncome').value='';$('query').value='';
 }
 async function refresh(){
@@ -62,6 +62,7 @@ async function refresh(){
  if(result.state!=='ready'){$('authStatus').textContent=states[result.state]||states.error;return;}
  data=result.payload;$('authStatus').textContent='로그인 · 열람 권한 확인 완료';$('loginPanel').classList.add('ready');$('protectedContent').hidden=false;
  for(const [name,s] of Object.entries(data.sources))$('health').append(node('p',name+' · '+(s.state==='unconnected'?'미연결 · API 키 미설정':s.ok&&!age(s.lastSuccess)?'수집 정상':'수집 지연')+' · 마지막 정상 '+stamp(s.lastSuccess)+' · '+(s.scope?.query||'수집 범위 미확인')+' · 페이지 상한 '+(s.scope?.pageCap||'?')+' · 범위 내 완료 '+(s.scope?.completeWithinQuery?'예':'미확인')));
+ $('coverageStatus').textContent=coverageText(data.sources['청약홈'],age(data.sources['청약홈']?.lastSuccess));
  updateSubtypes();render();
 }
 async function init(){
