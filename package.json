@@ -1,7 +1,7 @@
 {
   "name": "house",
   "version": "1.0.0",
-  "description": "\uc11c\uc6b8\u00b7\uacbd\uae30 \uc8fc\ud0dd \ubaa8\uc9d1\uacf5\uace0 \ud6c4\ubcf4\ub97c \uc0b4\ud3b4\ubcf4\ub294 \ud55c\uad6d\uc5b4 \ubaa8\ubc14\uc77c \uc6f9\uc571. \ube44\uacf5\uac1c \uc800\uc7a5\uc18c\uc774\uba70 \uacf5\uac1c \ubc30\ud3ec/Pages\ub294 \uc124\uc815\ud558\uc9c0 \uc54a\uc558\uc2b5\ub2c8\ub2e4.",
+  "description": "서울·경기 주택 모집공고 후보를 살펴보는 한국어 모바일 웹앱. 비공개 저장소이며 공개 배포/Pages는 설정하지 않았습니다.",
   "main": "index.js",
   "directories": {
     "doc": "docs",
@@ -9,7 +9,7 @@
   },
   "scripts": {
     "build": "node scripts/build.mjs",
-    "test": "node --test tests/auth.test.mjs"
+    "test": "node --test tests/*.test.mjs"
   },
   "repository": {
     "type": "git",
