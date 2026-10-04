@@ -14,6 +14,7 @@ jobs:
     timeout-minutes: 15
     env:
       SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+      DATA_GO_KR_SERVICE_KEY: ${{ secrets.DATA_GO_KR_SERVICE_KEY }}
       SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
     steps:
       - uses: actions/checkout@v4

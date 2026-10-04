@@ -31,7 +31,7 @@ def sync(mode):
         # Collector output only; never accept household profiles or credentials.
         if set(value)!={'updatedAt','sources','notices','omissions'}:raise ValueError('Unexpected payload fields')
         for n in value['notices']:
-            if n.get('source') not in ('SH','LH') or n.get('eligibility')!='unknown' or n.get('income') is not None:raise ValueError('Unreviewed payload schema')
+            if n.get('source') not in ('SH','LH','청약홈') or n.get('eligibility')!='unknown' or n.get('income') is not None:raise ValueError('Unreviewed payload schema')
             if any(k in n for k in ('email','password','profile','household','user_id')):raise ValueError('Personal data prohibited')
         headers['Prefer']='resolution=merge-duplicates,return=minimal'
         body=json.dumps(dict(id='current',payload=value,updated_at=value['updatedAt']),ensure_ascii=False).encode()

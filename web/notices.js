@@ -15,6 +15,7 @@ export const TYPES=[
 const normalized=n=>(n.title+' '+n.type).normalize('NFKC');
 export function category(n){
  const t=normalized(n);
+ if(n.housingKind==='sale')return 'sale';
  if(t.includes('미리내집'))return 'mirinae';
  if(!t.includes('분양전환')&&(/공공분양|민간분양|분양주택|주택분양|분양아파트|분양 모집|분양공고/.test(t)||n.type==='분양'))return 'sale';
  if(t.includes('매입임대'))return 'purchase-rental';
@@ -60,7 +61,8 @@ export function deadlineSort(a,b){
  return da.localeCompare(db)||(dateKey(b.published)||'').localeCompare(dateKey(a.published)||'')||a.title.localeCompare(b.title,'ko');
 }
 export function selectNotices(notices,filters,today=todayKST()){
- return notices.filter(n=>filters.types.includes(category(n))&&
+ const candidates=notices.filter(n=>!filters.supplyTrack||(filters.supplyTrack==='special'?!!dateKey(n.applicationWindows?.SPSPLY_RCEPT_ENDDE):(n.specialTracks||[]).includes(filters.supplyTrack)));
+ return candidates.map(n=>filters.supplyTrack?{...n,deadline:n.applicationWindows?.SPSPLY_RCEPT_ENDDE||null,deadlineMeaning:'특별공급 접수 종료일 · 접수시각/자격 원문 확인'}:n).filter(n=>filters.types.includes(category(n))&&
  (!filters.region||n.region.includes(filters.region))&&
  (!filters.subtype||subtype(n)===filters.subtype)&&
  (!filters.audience||(n.audience||[]).includes(filters.audience))&&

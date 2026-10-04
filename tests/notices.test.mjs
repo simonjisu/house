@@ -48,3 +48,10 @@ test('sales are distinct from purchase rental and rental conversion',()=>{
  assert.equal(publicationTone(row('old',{published:'2025-01-01'}),'2026-10-04'),'old');
  assert.equal(publicationTone(row('unknown'),'2026-10-04'),'unknown');
 });
+test('special-supply selection uses its own deadline and excludes unverifiable LH tracks',()=>{
+ const notices=[row('sale',{housingKind:'sale',deadline:'2026-10-20',applicationWindows:{SPSPLY_RCEPT_ENDDE:'2026-10-10'},specialTracks:['신혼부부 특별공급']}),row('LH 분양',{housingKind:'sale',deadline:'2026-10-12'})];
+ assert.equal(selectNotices(notices,{types:['sale']},'2026-10-04')[0].title,'LH 분양');
+ const selected=selectNotices(notices,{types:['sale'],supplyTrack:'신혼부부 특별공급'},'2026-10-04');
+ assert.equal(selected.length,1);assert.equal(selected[0].deadline,'2026-10-10');assert.equal(notices[0].deadline,'2026-10-20');
+ assert.equal(selectNotices(notices,{types:['sale'],supplyTrack:'special'},'2026-10-11').length,0);
+});

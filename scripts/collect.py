@@ -79,8 +79,8 @@ def parse_sh(html):
         result.append(n)
     return result
 
-def collect_lh():
-    check_robots(LH); initial=request(LH+'?mi=1026')
+def collect_lh(sale=False):
+    check_robots(LH); initial=request(LH+('?mi=1027' if sale else '?mi=1026'))
     soup=BeautifulSoup(initial,'html.parser')
     form=soup.select_one('input[name="currPage"]').find_parent('form')
     fields={}
@@ -91,7 +91,7 @@ def collect_lh():
         else: fields[node['name']]=node.get('value','')
     today=datetime.now(timezone(timedelta(hours=9))).date()
     fields.update(panStDt=(today-timedelta(days=60)).strftime('%Y%m%d'),panEdDt=today.strftime('%Y%m%d'),startDt=(today-timedelta(days=60)).isoformat(),endDt=today.isoformat(),
-                  panSs='',listCo='100',cnpCd='',srchY='N',uppAisTpCd='061339',srchUppAisTpCd='061339',prevListCo='100')
+                  panSs='',listCo='100',cnpCd='',srchY='N',uppAisTpCd='053954' if sale else '061339',srchUppAisTpCd='053954' if sale else '061339',prevListCo='100')
     rows=[]; fingerprints=set(); complete=False
     for page in range(1,6):
         fields.update(currPage=str(page),minSn=str((page-1)*100),maxSn=str(page*100))
@@ -104,7 +104,15 @@ def collect_lh():
         fingerprints.add(fingerprint); rows.extend(parsed)
         if len(parsed)<100: complete=True; break
         time.sleep(1)
-    return [n for n in rows if any(r in n['region'] for r in ('서울','경기','전국'))],dict(windowDays=60,pageCap=5,completeWithinQuery=complete,query='임대/매입/전세임대 · 전국조회 후 서울/경기/전국 필터 · 모든 목록 상태')
+    rows=[n for n in rows if any(r in n['region'] for r in ('서울','경기','전국'))]
+    if sale:
+        rows=[n for n in rows if n['id'].split(':')[-2] in ('05','39')]
+        for n in rows:
+            n['feed']='LH분양'
+            n['housingKind']='sale'
+            n['evidence']='LH 분양 목록 메타데이터 · 특별공급 기간/첨부/소득표 미검토'
+            n['hash']=hashlib.sha256(json.dumps({k:v for k,v in n.items() if k not in ('checkedAt','lastSeenAt','hash')},ensure_ascii=False,sort_keys=True).encode()).hexdigest()
+    return rows,dict(windowDays=60,pageCap=5,completeWithinQuery=complete,query=('분양주택05/공공분양 신혼희망39' if sale else '임대/매입/전세임대')+' · 전국조회 후 서울/경기/전국 필터 · 모든 목록 상태')
 
 def collect_sh():
     check_robots(SH); first=request(SH)
@@ -130,13 +138,13 @@ def merge(old, fresh, successful):
             history.append(dict(at=NOW(),previousHash=previous['hash'],status=previous['status'],title=previous['title']))
         n['changes']=history[-30:]; by_id[n['id']]=n
     for ident,n in by_id.items():
-        if n['source'] in successful and ident not in seen: n['missingFromLatest']=True
-    return sorted(by_id.values(),key=lambda n:n['published'],reverse=True)
+        if n.get('feed',n['source']) in successful and ident not in seen: n['missingFromLatest']=True
+    return sorted(by_id.values(),key=lambda n:str(n['published'] or ''),reverse=True)
 
 def main():
     old=json.loads(DATA.read_text()) if DATA.exists() else dict(notices=[],sources={})
     fresh=[]; successful=[]; sources=dict(old.get('sources',{})); failures=[]
-    for name,fn in [('LH',collect_lh),('SH',collect_sh)]:
+    for name,fn in [('LH',collect_lh),('LH분양',lambda:collect_lh(sale=True)),('SH',collect_sh)]:
         try:
             rows,scope=fn(); fresh.extend(rows); successful.append(name)
             sources[name]=dict(ok=True,lastAttempt=NOW(),lastSuccess=NOW(),count=len(rows),scope=scope)
@@ -144,8 +152,21 @@ def main():
             failures.append(name)
             sources[name]={**sources.get(name,{}),'ok':False,'lastAttempt':NOW(),'error':type(error).__name__}
             print(name+' collection failed: '+type(error).__name__,file=sys.stderr)
+    if __package__:
+        from .applyhome import collect_applyhome
+    else:
+        from applyhome import collect_applyhome
+    if not os.environ.get('DATA_GO_KR_SERVICE_KEY'):
+        sources['청약홈']={**sources.get('청약홈',{}),'ok':False,'state':'unconnected','lastAttempt':NOW(),'scope':{'query':'API 키 미설정 · 민간분양/특별공급 미연결'}}
+    else:
+        try:
+            rows,scope=collect_applyhome(notice);fresh.extend(rows);successful.append('청약홈')
+            sources['청약홈']=dict(ok=True,state='connected',lastAttempt=NOW(),lastSuccess=NOW(),count=len(rows),scope=scope)
+        except Exception as error:
+            failures.append('청약홈');sources['청약홈']={**sources.get('청약홈',{}),'ok':False,'state':'error','lastAttempt':NOW(),'error':type(error).__name__}
+            print('청약홈 collection failed: '+type(error).__name__,file=sys.stderr)
     output=dict(updatedAt=NOW(),sources=sources,notices=merge(old['notices'],fresh,successful),
-                omissions=['GH 및 기타 기관','LH 분양/토지/상가','SH 분양/기타 공지','첨부파일 및 공고별 소득표 미검토'])
+                omissions=['GH 및 기타 기관','청약홈 미연결 시 민간분양/특별공급','LH 토지/상가','SH 분양/기타 공지','첨부파일 및 공고별 소득표 미검토'])
     DATA.parent.mkdir(parents=True,exist_ok=True)
     temp=DATA.with_suffix('.tmp'); temp.write_text(json.dumps(output,ensure_ascii=False,indent=2)+'\n'); os.replace(temp,DATA)
     print('Public notices:',len(output['notices']),'successful sources:',','.join(successful))
