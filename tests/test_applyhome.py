@@ -33,6 +33,25 @@ class ApplyhomeTests(unittest.TestCase):
   old=notice('LH','synthetic','합성 분양','분양주택','서울','2026-10-01','공고중','https://apply.lh.or.kr/')
   old['feed']='LH분양';self.assertFalse(merge([old],[],['LH'])[0]['missingFromLatest'])
   self.assertTrue(merge([old],[],['LH분양'])[0]['missingFromLatest'])
+ def test_http_error_never_logs_key_or_url(self):
+  from urllib.error import HTTPError
+  from scripts.applyhome import ApplyhomeError
+  with patch.dict(os.environ,{'DATA_GO_KR_SERVICE_KEY':'synthetic-sensitive-value'}),patch('scripts.applyhome.build_opener') as opener:
+   opener.return_value.open.side_effect=HTTPError('https://api.odcloud.kr/?serviceKey=synthetic-sensitive-value',401,'Unauthorized',{},None)
+   with self.assertRaises(ApplyhomeError) as caught:api('getAPTLttotPblancDetail',{})
+   self.assertEqual(caught.exception.safe_code,'HTTP_401_getAPTLttotPblancDetail')
+   self.assertNotIn('synthetic-sensitive-value',str(caught.exception))
+ def test_safe_snapshot_report_validates_dates_and_source_separation(self):
+  from scripts.verify_snapshot import summary
+  n=parse_notice(self.sample(),[dict(NWWDS_HSHLDCO=2,NWBB_HSHLDCO=0)],notice)
+  payload={'sources':{'청약홈':{'ok':True,'state':'connected','count':1,'scope':{'completeWithinQuery':True}}},'notices':[n]}
+  report=summary(payload)
+  self.assertEqual(report['sources']['청약홈']['retainedCount'],1)
+  self.assertEqual(report['applyhome']['invalidDates'],0)
+  self.assertEqual(report['applyhome']['separateSpecialDeadlineRecords'],1)
+  self.assertEqual(report['applyhome']['counts']['NWBB_HSHLDCO']['zero'],1)
+  n['applicationWindows']['SPSPLY_RCEPT_ENDDE']='2026-02-30'
+  self.assertEqual(summary(payload)['applyhome']['invalidDates'],1)
  def test_unconnected_main_preserves_previous_data(self):
   from tempfile import TemporaryDirectory
   from pathlib import Path

@@ -163,8 +163,8 @@ def main():
             rows,scope=collect_applyhome(notice);fresh.extend(rows);successful.append('청약홈')
             sources['청약홈']=dict(ok=True,state='connected',lastAttempt=NOW(),lastSuccess=NOW(),count=len(rows),scope=scope)
         except Exception as error:
-            failures.append('청약홈');sources['청약홈']={**sources.get('청약홈',{}),'ok':False,'state':'error','lastAttempt':NOW(),'error':type(error).__name__}
-            print('청약홈 collection failed: '+type(error).__name__,file=sys.stderr)
+            failures.append('청약홈');sources['청약홈']={**sources.get('청약홈',{}),'ok':False,'state':'error','lastAttempt':NOW(),'error':getattr(error,'safe_code',type(error).__name__)}
+            print('청약홈 collection failed: '+getattr(error,'safe_code',type(error).__name__),file=sys.stderr)
     output=dict(updatedAt=NOW(),sources=sources,notices=merge(old['notices'],fresh,successful),
                 omissions=['GH 및 기타 기관','청약홈 미연결 시 민간분양/특별공급','LH 토지/상가','SH 분양/기타 공지','첨부파일 및 공고별 소득표 미검토'])
     DATA.parent.mkdir(parents=True,exist_ok=True)

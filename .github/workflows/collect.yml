@@ -33,6 +33,9 @@ jobs:
       - name: Sync into protected database only
         if: (steps.collect.outcome == 'success' || steps.collect.outcome == 'failure') && env.SUPABASE_URL != '' && env.SUPABASE_SECRET_KEY != ''
         run: python scripts/sync_supabase.py push
+      - name: Verify protected data and report safe source counts
+        if: (steps.collect.outcome == 'success' || steps.collect.outcome == 'failure') && env.SUPABASE_URL != '' && env.SUPABASE_SECRET_KEY != ''
+        run: python scripts/verify_snapshot.py
       - name: Configuration pending
         if: env.SUPABASE_URL == '' || env.SUPABASE_SECRET_KEY == ''
         run: echo 'Supabase setup pending. No data committed or published.' >> "$GITHUB_STEP_SUMMARY"

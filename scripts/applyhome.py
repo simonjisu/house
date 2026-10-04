@@ -3,11 +3,17 @@ import hashlib,json,os
 from datetime import datetime,timedelta,timezone
 from urllib.parse import urlencode,urlparse
 from urllib.request import Request,build_opener,HTTPRedirectHandler
+from urllib.error import HTTPError
 BASE='https://api.odcloud.kr/api/ApplyhomeInfoDetailSvc/v1/'
 WINDOW_FIELDS=['RCEPT_BGNDE','RCEPT_ENDDE','SPSPLY_RCEPT_BGNDE','SPSPLY_RCEPT_ENDDE']+[
  f'GNRL_RNK{rank}_{region}_{edge}' for rank in (1,2) for region in ('CRSPAREA','ETC_GG','ETC_AREA') for edge in ('RCPTDE','ENDDE')]
 CODE_FIELDS=['HOUSE_SECD','HOUSE_DTL_SECD','RENT_SECD','PUBLIC_HOUSE_SPCLW_APPLC_AT']
 MODEL_FIELDS=['MODEL_NO','HOUSE_TY','SUPLY_AR','NWWDS_HSHLDCO','NWBB_HSHLDCO','SPSPLY_HSHLDCO','LTTOT_TOP_AMOUNT']
+class ApplyhomeError(ValueError):
+ def __init__(self,code):
+  self.safe_code=code
+  super().__init__(code)
+
 def api(endpoint,params):
  if endpoint not in ('getAPTLttotPblancDetail','getAPTLttotPblancMdl'):raise ValueError('Unsupported endpoint')
  key=os.environ.get('DATA_GO_KR_SERVICE_KEY','')
@@ -15,10 +21,15 @@ def api(endpoint,params):
  request=Request(BASE+endpoint+'?'+urlencode({**params,'serviceKey':key}),headers={'Accept':'application/json'})
  class NoRedirect(HTTPRedirectHandler):
   def redirect_request(self,*args,**kwargs):raise ValueError('API redirect prohibited')
- with build_opener(NoRedirect()).open(request,timeout=40) as response:
-  if urlparse(response.url).hostname!='api.odcloud.kr':raise ValueError('Unexpected redirect')
-  value=json.load(response)
- if not isinstance(value.get('data'),list) or not isinstance(value.get('matchCount'),int):raise ValueError('API schema changed')
+ try:
+  with build_opener(NoRedirect()).open(request,timeout=40) as response:
+   if urlparse(response.url).hostname!='api.odcloud.kr':raise ApplyhomeError('UNEXPECTED_REDIRECT')
+   value=json.load(response)
+ except HTTPError as error:
+  # Never log exception text, request URL, body or key. Numeric HTTP status only.
+  error.close()
+  raise ApplyhomeError('HTTP_'+str(error.code)+'_'+endpoint) from None
+ if not isinstance(value.get('data'),list) or not isinstance(value.get('matchCount'),int):raise ApplyhomeError('API_SCHEMA_CHANGED_'+endpoint)
  return value
 
 def parse_notice(row,models,make_notice):
