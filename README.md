@@ -48,7 +48,7 @@ python3 -m venv .venv
 
 ## 검증 및 공개 전 감사
 
-Git 전체 이력의 17개 blob, Actions 로그 2건에서 비밀키/개인 연락처 패턴 매치 0. 초기 공고 snapshot은 공식 메타데이터임을 확인했습니다. 공개화 전에 `web/data/notices.json`을 전체 Git 이력에서 제거하고 로컬 bundle 복구본을 Mac에만 남겼습니다. Actions 공개 산출물에 수집 JSON을 넣지 않습니다.
+Git 전체 이력의 17개 blob, Actions 로그 2건에서 비밀키/개인 연락처 패턴 매치 0. 초기 공고 snapshot은 공식 메타데이터임을 확인했습니다. 공개화 전에 `web/data/notices.json`을 전체 Git 이력에서 제거했습니다. GitHub의 과거 commit 참조 잔존도 확인하여 기존 저장소는 `house-private-history-20261004` 비공개 보관본으로 옮기고 일일 workflow를 비활성화했습니다. 공개 `house`는 현재 코드만 담은 새 이력이며 옛 공고 snapshot 참조는 404를 확인했습니다. 로컬 bundle 복구본도 Mac에만 남겼습니다. Actions 공개 산출물에 수집 JSON을 넣지 않습니다.
 
 - Python 수집기 테스트 4개
 - Node 인증 경계/설정 누락/오류/허용 및 거부 테스트 6개
