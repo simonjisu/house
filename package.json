@@ -1,0 +1,31 @@
+{
+  "name": "house",
+  "version": "1.0.0",
+  "description": "\uc11c\uc6b8\u00b7\uacbd\uae30 \uc8fc\ud0dd \ubaa8\uc9d1\uacf5\uace0 \ud6c4\ubcf4\ub97c \uc0b4\ud3b4\ubcf4\ub294 \ud55c\uad6d\uc5b4 \ubaa8\ubc14\uc77c \uc6f9\uc571. \ube44\uacf5\uac1c \uc800\uc7a5\uc18c\uc774\uba70 \uacf5\uac1c \ubc30\ud3ec/Pages\ub294 \uc124\uc815\ud558\uc9c0 \uc54a\uc558\uc2b5\ub2c8\ub2e4.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --test tests/auth.test.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/simonjisu/house.git"
+  },
+  "keywords": [],
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/simonjisu/house/issues"
+  },
+  "homepage": "https://github.com/simonjisu/house#readme",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.117.2"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  },
+  "private": true
+}

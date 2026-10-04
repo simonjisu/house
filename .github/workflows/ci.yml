@@ -1,0 +1,36 @@
+name: Security and RLS checks
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: isolated-ci-fixture-only
+          POSTGRES_DB: house_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: npm ci && npm test && npm run build
+      - run: pip install -r requirements.txt && python -m unittest discover -s tests -v
+      - name: Real PostgreSQL role and RLS tests
+        env:
+          PGPASSWORD: isolated-ci-fixture-only
+        run: |
+          psql -h localhost -U postgres -d house_test -v ON_ERROR_STOP=1 -f supabase/tests/bootstrap.sql
+          psql -h localhost -U postgres -d house_test -v ON_ERROR_STOP=1 -f supabase/migrations/001_house.sql
+          psql -h localhost -U postgres -d house_test -v ON_ERROR_STOP=1 -f supabase/tests/house_rls.sql

@@ -1,0 +1,40 @@
+name: Daily official notices
+on:
+  schedule:
+    - cron: '0 0 * * *' # 09:00 Asia/Seoul; may be delayed
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: notice-collection
+  cancel-in-progress: false
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r requirements.txt
+      - run: python -m unittest discover -s tests -v
+      - name: Previous good data from protected database
+        if: env.SUPABASE_URL != '' && env.SUPABASE_SECRET_KEY != ''
+        run: python scripts/sync_supabase.py pull
+      - name: Collect public official metadata
+        id: collect
+        continue-on-error: true
+        run: python scripts/collect.py
+      - name: Sync into protected database only
+        if: (steps.collect.outcome == 'success' || steps.collect.outcome == 'failure') && env.SUPABASE_URL != '' && env.SUPABASE_SECRET_KEY != ''
+        run: python scripts/sync_supabase.py push
+      - name: Configuration pending
+        if: env.SUPABASE_URL == '' || env.SUPABASE_SECRET_KEY == ''
+        run: echo 'Supabase setup pending. No data committed or published.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Report source failures
+        if: steps.collect.outcome == 'failure'
+        run: exit 1
