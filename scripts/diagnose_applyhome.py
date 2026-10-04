@@ -4,9 +4,9 @@ from urllib.error import HTTPError,URLError
 from urllib.parse import urlencode
 from urllib.request import Request,build_opener,HTTPRedirectHandler
 if __package__:
- from .applyhome import BASE
+ from .applyhome import BASE,normalize_key,ApplyhomeError
 else:
- from applyhome import BASE
+ from applyhome import BASE,normalize_key,ApplyhomeError
 
 class NoRedirect(HTTPRedirectHandler):
  def redirect_request(self,*args,**kwargs):raise ValueError('Redirect prohibited')
@@ -47,8 +47,12 @@ def main():
  key=os.environ.get('DATA_GO_KR_SERVICE_KEY','')
  report={'configured':bool(key),'surroundingWhitespace':key!=key.strip(),'containsPercentEscapes':bool(re.search(r'%[0-9A-Fa-f]{2}',key)),'containsLineBreak':any(c in key for c in '\r\n'),'surroundingQuotes':len(key)>1 and key[0]==key[-1] and key[0] in "\"'"}
  if key:
-  report['query']=probe('query',key)
-  report['header']=probe('header',key)
+  try:
+   normalized=normalize_key(key)
+   report['normalizationApplied']=key!=normalized
+   report['query']=probe('query',normalized)
+   report['header']=probe('header',normalized)
+  except ApplyhomeError as error:report['normalizationError']=error.safe_code
  print('Applyhome auth diagnostics: '+json.dumps(report,sort_keys=True))
  return 0
 if __name__=='__main__':sys.exit(main())

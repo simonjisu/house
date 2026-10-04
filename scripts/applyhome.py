@@ -1,7 +1,7 @@
-"""Optional official API adapter. Decoded credential is URL-encoded once, never included in payload/logs."""
-import hashlib,json,os
+"""Optional official API adapter. Credential is normalized, decoded at most once and URL-encoded once, never included in payload/logs."""
+import hashlib,json,os,re
 from datetime import datetime,timedelta,timezone
-from urllib.parse import urlencode,urlparse
+from urllib.parse import urlencode,urlparse,unquote
 from urllib.request import Request,build_opener,HTTPRedirectHandler
 from urllib.error import HTTPError
 BASE='https://api.odcloud.kr/api/ApplyhomeInfoDetailSvc/v1/'
@@ -14,10 +14,17 @@ class ApplyhomeError(ValueError):
   self.safe_code=code
   super().__init__(code)
 
+def normalize_key(raw):
+ # API tokens have no whitespace. Accept pasted line wrapping and either portal representation.
+ key=''.join(raw.split())
+ if re.search(r'%[0-9A-Fa-f]{2}',key):key=unquote(key)
+ if re.search(r'%[0-9A-Fa-f]{2}',key):raise ApplyhomeError('DOUBLE_ENCODED_KEY_INPUT')
+ if not key:raise ApplyhomeError('MISSING_KEY_INPUT')
+ return key
+
 def api(endpoint,params):
  if endpoint not in ('getAPTLttotPblancDetail','getAPTLttotPblancMdl'):raise ValueError('Unsupported endpoint')
- key=os.environ.get('DATA_GO_KR_SERVICE_KEY','')
- if not key:raise ValueError('Not configured')
+ key=normalize_key(os.environ.get('DATA_GO_KR_SERVICE_KEY',''))
  request=Request(BASE+endpoint+'?'+urlencode({**params,'serviceKey':key}),headers={'Accept':'application/json'})
  class NoRedirect(HTTPRedirectHandler):
   def redirect_request(self,*args,**kwargs):raise ValueError('API redirect prohibited')

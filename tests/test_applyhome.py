@@ -72,6 +72,22 @@ class ApplyhomeTests(unittest.TestCase):
     req=opener.return_value.open.call_args[0][0];query=parse_qs(urlparse(req.full_url).query)
     if mode=='query':self.assertEqual(query['serviceKey'],['synthetic+a/b==']);self.assertNotIn('Authorization',req.headers)
     else:self.assertEqual(req.headers['Authorization'],'synthetic+a/b==');self.assertNotIn('serviceKey',query)
+ def test_normalize_encoded_and_decoded_preserves_literal_plus(self):
+  from scripts.applyhome import normalize_key,ApplyhomeError
+  self.assertEqual(normalize_key(' synthetic+a/b==\n'),'synthetic+a/b==')
+  self.assertEqual(normalize_key('synthetic%2Ba%2Fb%3D%3D\r\n'),'synthetic+a/b==')
+  self.assertEqual(normalize_key('synthetic%2Ba%2F\nb%3D%3D'),'synthetic+a/b==')
+  with self.assertRaises(ApplyhomeError):normalize_key('synthetic%252Ba')
+ def test_encoded_secret_reaches_request_once_normalized(self):
+  from contextlib import nullcontext
+  import io,json
+  from urllib.parse import parse_qs,urlparse
+  with patch.dict(os.environ,{'DATA_GO_KR_SERVICE_KEY':' synthetic%2Ba%2Fb%3D%3D\n'}),patch('scripts.applyhome.build_opener') as opener:
+   response=io.StringIO(json.dumps({'data':[],'matchCount':0}));response.url='https://api.odcloud.kr/api/'
+   opener.return_value.open.return_value=nullcontext(response)
+   api('getAPTLttotPblancDetail',{})
+   req=opener.return_value.open.call_args[0][0]
+   self.assertEqual(parse_qs(urlparse(req.full_url).query)['serviceKey'],['synthetic+a/b=='])
  def test_unconnected_main_preserves_previous_data(self):
   from tempfile import TemporaryDirectory
   from pathlib import Path
