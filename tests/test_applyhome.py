@@ -52,6 +52,26 @@ class ApplyhomeTests(unittest.TestCase):
   self.assertEqual(report['applyhome']['counts']['NWBB_HSHLDCO']['zero'],1)
   n['applicationWindows']['SPSPLY_RCEPT_ENDDE']='2026-02-30'
   self.assertEqual(summary(payload)['applyhome']['invalidDates'],1)
+ def test_diagnostics_emit_only_fixed_error_categories(self):
+  from scripts.diagnose_applyhome import safe_error_body
+  import json
+  raw=json.dumps({'code':-4,'msg':'등록되지 않은 인증키 synthetic-sensitive-value'}).encode()
+  out=safe_error_body(raw);self.assertEqual(out,{'apiCode':-4,'category':'UNREGISTERED_KEY'})
+  self.assertNotIn('synthetic-sensitive-value',json.dumps(out))
+  self.assertEqual(safe_error_body(b'<html>synthetic-sensitive-value</html>'),{'category':'NON_JSON_ERROR'})
+ def test_header_auth_is_raw_and_query_is_encoded_once(self):
+  from scripts.diagnose_applyhome import probe
+  from contextlib import nullcontext
+  import io,json
+  from urllib.parse import parse_qs,urlparse
+  for mode in ('query','header'):
+   with patch('scripts.diagnose_applyhome.build_opener') as opener:
+    response=io.StringIO(json.dumps({'data':[],'matchCount':0}));response.status=200
+    opener.return_value.open.return_value=nullcontext(response)
+    self.assertEqual(probe(mode,'synthetic+a/b==')['http'],200)
+    req=opener.return_value.open.call_args[0][0];query=parse_qs(urlparse(req.full_url).query)
+    if mode=='query':self.assertEqual(query['serviceKey'],['synthetic+a/b==']);self.assertNotIn('Authorization',req.headers)
+    else:self.assertEqual(req.headers['Authorization'],'synthetic+a/b==');self.assertNotIn('serviceKey',query)
  def test_unconnected_main_preserves_previous_data(self):
   from tempfile import TemporaryDirectory
   from pathlib import Path

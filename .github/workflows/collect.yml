@@ -3,6 +3,11 @@ on:
   schedule:
     - cron: '0 0 * * *' # 09:00 Asia/Seoul; may be delayed
   workflow_dispatch:
+    inputs:
+      diagnose_auth:
+        description: Run two safe read-only auth probes
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -23,6 +28,9 @@ jobs:
           python-version: '3.12'
       - run: pip install -r requirements.txt
       - run: python -m unittest discover -s tests -v
+      - name: Safe Applyhome auth diagnostics
+        if: inputs.diagnose_auth == true
+        run: python scripts/diagnose_applyhome.py
       - name: Previous good data from protected database
         if: env.SUPABASE_URL != '' && env.SUPABASE_SECRET_KEY != ''
         run: python scripts/sync_supabase.py pull
